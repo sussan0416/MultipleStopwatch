@@ -1,5 +1,6 @@
 #include "CustomTypes.h"
-#include "Ticker.h"
+#include <Ticker.h>
+#include <LiquidCrystal.h>
 
 #define BUTTON_1_PIN 36
 #define BUTTON_2_PIN 39
@@ -13,6 +14,19 @@
 #define BUTTON_4_LED_OUT_PIN 27
 #define BUTTON_5_LED_OUT_PIN 14
 
+#define LCD_RS_PIN 23
+#define LCD_EN_PIN 22
+#define LCD_D4_PIN 21
+#define LCD_D5_PIN 19
+#define LCD_D6_PIN 18
+#define LCD_D7_PIN 17
+
+#define LCD_ROW 4
+#define LCD_COL 20
+
+#define TICKER_MEASURE_PERIOD_SEC 0.1
+#define TICKER_PRINT_PERIOD_SEC 0.2
+
 // Measurement
 unsigned long measured_seconds[] = {0, 0, 0, 0, 0};
 Measure measure_states[] = {
@@ -22,7 +36,7 @@ Measure measure_states[] = {
 };
 
 // Buttons
-// 0 - 4: Working
+const char button_chars[] = {'A', 'B', 'C', 'D', 'E'};
 short button_counts[] = {0, 0, 0, 0, 0};
 Button button_states[] = {
   Button::Up, Button::Up,
@@ -47,6 +61,9 @@ const short button_long_count = 200;
 Ticker measurement_ticker;
 Ticker print_measure_ticker;
 
+// LCD
+LiquidCrystal lcd(LCD_RS_PIN, LCD_EN_PIN, LCD_D4_PIN, LCD_D5_PIN, LCD_D6_PIN, LCD_D7_PIN);
+
 // fired every 1/10 second.
 void measure() {
   for (int i = 0; i < (sizeof(measure_states) / sizeof(measure_states[0])); i++) {
@@ -62,6 +79,14 @@ void printMeasure() {
     char str[32];
     sprintf(str, "%d: %02d:%02d:%02d, ", i, t / 60 / 60, t / 60 % 60, t % 60);
     Serial.print(str);
+
+    unsigned short col = (i % 2 == 0) ? 0 : 10;
+    unsigned short row = i / 2;
+    lcd.setCursor(col, row);
+
+    char lcd_str[10];  // LCD has 20 chars per row. 20 / 2 = 10.
+    sprintf(lcd_str, "%c%02d:%02d:%02d", button_chars[i], t / 60 / 60, t / 60 % 60, t % 60);
+    lcd.print(lcd_str);
   }
   Serial.println("");
 }
@@ -76,15 +101,17 @@ void setup() {
   Serial.begin(115200);
   
   for (int i = 0; i < (sizeof(button_pins) / sizeof(button_pins[0])); i++) {
-    pinMode(button_pins[i], INPUT_PULLUP);
+    pinMode(button_pins[i], INPUT);
   }
   for (int i = 0; i < (sizeof(button_led_pins) / sizeof(button_led_pins[0])); i++) {
     pinMode(button_led_pins[i], OUTPUT);
   }
 
+  lcd.begin(LCD_COL, LCD_ROW);
+
   // measure every 0.1 seconds.
-  measurement_ticker.attach(0.1, measure);
-  print_measure_ticker.attach(1.0, printMeasure);
+  measurement_ticker.attach(TICKER_MEASURE_PERIOD_SEC, measure);
+  print_measure_ticker.attach(TICKER_PRINT_PERIOD_SEC, printMeasure);
 }
 
 void loop() {
