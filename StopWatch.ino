@@ -2,6 +2,7 @@
 #include <Ticker.h>
 #include <LiquidCrystal.h>
 #include "Backlight.h"
+#include "NTP.h"
 
 #define BUTTON_1_PIN 36
 #define BUTTON_2_PIN 39
@@ -68,6 +69,9 @@ Ticker print_measure_ticker;
 // LCD
 LiquidCrystal lcd(LCD_RS_PIN, LCD_EN_PIN, LCD_D4_PIN, LCD_D5_PIN, LCD_D6_PIN, LCD_D7_PIN);
 
+// NTP
+NTP ntp;
+
 // fired every 1/10 second.
 void measure() {
   for (int i = 0; i < (sizeof(measure_states) / sizeof(measure_states[0])); i++) {
@@ -81,7 +85,7 @@ void printMeasure() {
   for (int i = 0; i < (sizeof(measure_states) / sizeof(measure_states[0])); i++) {
     unsigned long t = measured_seconds[i] / 10;
     char str[32];
-    sprintf(str, "%d: %02d:%02d:%02d, ", i, t / 60 / 60, t / 60 % 60, t % 60);
+    sprintf(str, "%d: %2d:%02d:%02d, ", i, t / 60 / 60, t / 60 % 60, t % 60);
     Serial.print(str);
 
     unsigned short col = (i % 2 == 0) ? 0 : 10;
@@ -89,10 +93,12 @@ void printMeasure() {
     lcd.setCursor(col, row);
 
     char lcd_str[10];  // LCD has 20 chars per row. 20 / 2 = 10.
-    sprintf(lcd_str, "%c%02d:%02d:%02d", button_chars[i], t / 60 / 60, t / 60 % 60, t % 60);
+    sprintf(lcd_str, "%c%2d:%02d:%02d", button_chars[i], t / 60 / 60, t / 60 % 60, t % 60);
     lcd.print(lcd_str);
   }
   Serial.println("");
+  lcd.setCursor(0, 3);
+  lcd.print(ntp.getCurrentTime());
 }
 
 void stopAllMeasure() {
@@ -114,6 +120,10 @@ void setup() {
   backlight.begin();
 
   lcd.begin(LCD_COL, LCD_ROW);
+
+  lcd.print("NTP Sync...");
+
+  ntp.begin();
 
   // measure every 0.1 seconds.
   measurement_ticker.attach(TICKER_MEASURE_PERIOD_SEC, measure);
