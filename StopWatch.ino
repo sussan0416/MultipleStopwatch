@@ -1,6 +1,7 @@
 #include "CustomTypes.h"
 #include <Ticker.h>
 #include <LiquidCrystal.h>
+#include "Backlight.h"
 
 #define BUTTON_1_PIN 36
 #define BUTTON_2_PIN 39
@@ -57,6 +58,9 @@ int button_led_pins[] = {
 const short button_short_count = 3;
 const short button_long_count = 200;
 
+// Backlight
+Backlight backlight;
+
 // Tickers
 Ticker measurement_ticker;
 Ticker print_measure_ticker;
@@ -106,6 +110,8 @@ void setup() {
   for (int i = 0; i < (sizeof(button_led_pins) / sizeof(button_led_pins[0])); i++) {
     pinMode(button_led_pins[i], OUTPUT);
   }
+
+  backlight.begin();
 
   lcd.begin(LCD_COL, LCD_ROW);
 
@@ -173,6 +179,9 @@ void loop() {
   for (int i = 0; i < (sizeof(button_states) / sizeof(button_states[0])); i++) {
     button_states[i] = Button::Up;
   }
+
+  // バックライト
+  backlight.onLoop();
 
   delay(10);
 }
