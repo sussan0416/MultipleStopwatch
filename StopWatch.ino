@@ -3,6 +3,9 @@
 #include <LiquidCrystal.h>
 #include "Backlight.h"
 #include "NTP.h"
+#include "Env.h"
+#include <WiFi.h>
+#include "OTA.h"
 
 #define BUTTON_1_PIN 36
 #define BUTTON_2_PIN 39
@@ -25,6 +28,8 @@
 
 #define LCD_ROW 4
 #define LCD_COL 20
+
+#define MODE_BUTTON_PIN 4
 
 #define TICKER_MEASURE_PERIOD_SEC 0.1
 #define TICKER_PRINT_PERIOD_SEC 0.2
@@ -71,6 +76,10 @@ LiquidCrystal lcd(LCD_RS_PIN, LCD_EN_PIN, LCD_D4_PIN, LCD_D5_PIN, LCD_D6_PIN, LC
 
 // NTP
 NTP ntp;
+
+// OTA
+OTA ota;
+bool is_ota_mode;
 
 // fired every 1/10 second.
 void measure() {
@@ -121,9 +130,16 @@ void setup() {
 
   lcd.begin(LCD_COL, LCD_ROW);
 
-  lcd.print("NTP Sync...");
+  lcd.print("Connecting to Wi-Fi");
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+  }
 
+  lcd.clear();
+  lcd.print("NTP Sync...");
   ntp.begin();
+  lcd.clear();
 
   // measure every 0.1 seconds.
   measurement_ticker.attach(TICKER_MEASURE_PERIOD_SEC, measure);
@@ -131,6 +147,24 @@ void setup() {
 }
 
 void loop() {
+  // OTA
+  if (digitalRead(MODE_BUTTON_PIN) == LOW) {
+    is_ota_mode = true;
+    measurement_ticker.detach();
+    print_measure_ticker.detach();
+
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("OTA Mode");
+    lcd.setCursor(0, 1);
+    lcd.print("http://timer.local");
+  }
+
+  if (is_ota_mode) {
+    ota.handleClient();
+    return;
+  }
+
   // ボタン状態のチェック
   for (int i = 0; i < (sizeof(button_pins) / sizeof(button_pins[0])); i++) {
     if (digitalRead(button_pins[i]) == LOW) {
