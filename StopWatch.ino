@@ -1,4 +1,4 @@
-#include "CustomTypes.h"
+#include "Interface.h"
 #include <Ticker.h>
 #include <LiquidCrystal.h>
 #include "Backlight.h"
@@ -6,18 +6,6 @@
 #include "Env.h"
 #include <WiFi.h>
 #include "OTA.h"
-
-#define BUTTON_1_PIN 36
-#define BUTTON_2_PIN 39
-#define BUTTON_3_PIN 34
-#define BUTTON_4_PIN 35
-#define BUTTON_5_PIN 32
-
-#define BUTTON_1_LED_OUT_PIN 33
-#define BUTTON_2_LED_OUT_PIN 25
-#define BUTTON_3_LED_OUT_PIN 26
-#define BUTTON_4_LED_OUT_PIN 27
-#define BUTTON_5_LED_OUT_PIN 14
 
 #define LCD_RS_PIN 23
 #define LCD_EN_PIN 22
@@ -44,25 +32,6 @@ Measure measure_states[] = {
 
 // Buttons
 const char button_chars[] = {'A', 'B', 'C', 'D', 'E'};
-short button_counts[] = {0, 0, 0, 0, 0};
-Button button_states[] = {
-  Button::Up, Button::Up,
-  Button::Up, Button::Up,
-  Button::Up
-};
-int button_pins[] = {
-  BUTTON_1_PIN, BUTTON_2_PIN,
-  BUTTON_3_PIN, BUTTON_4_PIN, BUTTON_5_PIN
-};
-int button_led_pins[] = {
-  BUTTON_1_LED_OUT_PIN,
-  BUTTON_2_LED_OUT_PIN,
-  BUTTON_3_LED_OUT_PIN,
-  BUTTON_4_LED_OUT_PIN,
-  BUTTON_5_LED_OUT_PIN
-};
-const short button_short_count = 3;
-const short button_long_count = 200;
 
 // Backlight
 Backlight backlight;
@@ -80,6 +49,8 @@ NTP ntp;
 // OTA
 OTA ota;
 bool is_ota_mode;
+
+Interface interface;
 
 // fired every 1/10 second.
 void measure() {
@@ -117,14 +88,9 @@ void stopAllMeasure() {
 }
 
 void setup() {
-  Serial.begin(115200);
+  interface.setup();
   
-  for (int i = 0; i < (sizeof(button_pins) / sizeof(button_pins[0])); i++) {
-    pinMode(button_pins[i], INPUT);
-  }
-  for (int i = 0; i < (sizeof(button_led_pins) / sizeof(button_led_pins[0])); i++) {
-    pinMode(button_led_pins[i], OUTPUT);
-  }
+  Serial.begin(115200);
 
   backlight.begin();
 
@@ -165,25 +131,11 @@ void loop() {
     return;
   }
 
-  // ボタン状態のチェック
-  for (int i = 0; i < (sizeof(button_pins) / sizeof(button_pins[0])); i++) {
-    if (digitalRead(button_pins[i]) == LOW) {
-      if (button_counts[i] < button_long_count) {
-        button_counts[i]++;
-      } else {
-        button_states[i] = Button::DownLong;
-      }
-    } else {
-      if (button_counts[i] > button_short_count && button_counts[i] < button_long_count) {
-        button_states[i] = Button::DownShort;
-      }
-      button_counts[i] = 0;
-    }
-  }
+  interface.loop();
 
   // 計測ステートの変更
-  for (int i = 0; i < (sizeof(button_pins) / sizeof(button_pins[0])); i++) {
-    switch (button_states[i]) {
+  for (int i = 0; i < interface.getNumberOfButtons(); i++) {
+    switch (interface.getButtonState(i)) {
       case Button::Up:
         // なし
         break;
@@ -211,18 +163,15 @@ void loop() {
   for (int i = 0; i < (sizeof(measure_states) / sizeof(measure_states[0])); i++) {
     switch (measure_states[i]) {
       case Measure::Stop:
-        digitalWrite(button_led_pins[i], LOW);
+        interface.setButtonLighting(i, false);
         break;
       case Measure::Run:
-        digitalWrite(button_led_pins[i], HIGH);
+        interface.setButtonLighting(i, true);
         break;
     }
   }
 
-  // 処理の終わり
-  for (int i = 0; i < (sizeof(button_states) / sizeof(button_states[0])); i++) {
-    button_states[i] = Button::Up;
-  }
+  interface.endLoop();
 
   // バックライト
   backlight.onLoop();
