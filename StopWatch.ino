@@ -1,21 +1,10 @@
 #include "Interface.h"
 #include <Ticker.h>
-#include <LiquidCrystal.h>
 #include "Backlight.h"
 #include "NTP.h"
 #include "Env.h"
 #include <WiFi.h>
 #include "OTA.h"
-
-#define LCD_RS_PIN 23
-#define LCD_EN_PIN 22
-#define LCD_D4_PIN 21
-#define LCD_D5_PIN 19
-#define LCD_D6_PIN 18
-#define LCD_D7_PIN 17
-
-#define LCD_ROW 4
-#define LCD_COL 20
 
 #define MODE_BUTTON_PIN 4
 
@@ -39,9 +28,6 @@ Backlight backlight;
 // Tickers
 Ticker measurement_ticker;
 Ticker print_measure_ticker;
-
-// LCD
-LiquidCrystal lcd(LCD_RS_PIN, LCD_EN_PIN, LCD_D4_PIN, LCD_D5_PIN, LCD_D6_PIN, LCD_D7_PIN);
 
 // NTP
 NTP ntp;
@@ -70,15 +56,15 @@ void printMeasure() {
 
     unsigned short col = (i % 2 == 0) ? 0 : 10;
     unsigned short row = i / 2;
-    lcd.setCursor(col, row);
+    interface.setCursorLCD(col, row);
 
     char lcd_str[10];  // LCD has 20 chars per row. 20 / 2 = 10.
     sprintf(lcd_str, "%c%2d:%02d:%02d", button_chars[i], t / 60 / 60, t / 60 % 60, t % 60);
-    lcd.print(lcd_str);
+    interface.printLCD(lcd_str);
   }
   Serial.println("");
-  lcd.setCursor(0, 3);
-  lcd.print(ntp.getCurrentTime());
+  interface.setCursorLCD(0, 3);
+  interface.printLCD(ntp.getCurrentTime());
 }
 
 void stopAllMeasure() {
@@ -94,18 +80,16 @@ void setup() {
 
   backlight.begin();
 
-  lcd.begin(LCD_COL, LCD_ROW);
-
-  lcd.print("Connecting to Wi-Fi");
+  interface.printLCD("Connecting to Wi-Fi");
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
       delay(500);
   }
 
-  lcd.clear();
-  lcd.print("NTP Sync...");
+  interface.clearLCD();
+  interface.printLCD("NTP Sync...");
   ntp.begin();
-  lcd.clear();
+  interface.clearLCD();
 
   // measure every 0.1 seconds.
   measurement_ticker.attach(TICKER_MEASURE_PERIOD_SEC, measure);
@@ -119,11 +103,11 @@ void loop() {
     measurement_ticker.detach();
     print_measure_ticker.detach();
 
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("OTA Mode");
-    lcd.setCursor(0, 1);
-    lcd.print("http://timer.local");
+    interface.clearLCD();
+    interface.setCursorLCD(0, 0);
+    interface.printLCD("OTA Mode");
+    interface.setCursorLCD(0, 1);
+    interface.printLCD("http://timer.local");
   }
 
   if (is_ota_mode) {

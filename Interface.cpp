@@ -1,5 +1,5 @@
 #include "Interface.h"
-#include <Arduino.h>
+#include <LiquidCrystal.h>
 
 #define BUTTON_1_PIN 36
 #define BUTTON_2_PIN 39
@@ -13,6 +13,17 @@
 #define BUTTON_4_LED_OUT_PIN 27
 #define BUTTON_5_LED_OUT_PIN 14
 
+#define LCD_RS_PIN 23
+#define LCD_EN_PIN 22
+#define LCD_D4_PIN 21
+#define LCD_D5_PIN 19
+#define LCD_D6_PIN 18
+#define LCD_D7_PIN 17
+
+#define LCD_ROW 4
+#define LCD_COL 20
+
+// Buttons
 short button_counts[] = {0, 0, 0, 0, 0};
 Button button_states[] = {
   Button::Up, Button::Up,
@@ -33,6 +44,9 @@ int button_led_pins[] = {
 const short button_short_count = 3;
 const short button_long_count = 200;
 
+// LCD
+LiquidCrystal lcd(LCD_RS_PIN, LCD_EN_PIN, LCD_D4_PIN, LCD_D5_PIN, LCD_D6_PIN, LCD_D7_PIN);
+
 void Interface::setup() {
   for (int i = 0; i < (sizeof(button_pins) / sizeof(button_pins[0])); i++) {
     pinMode(button_pins[i], INPUT);
@@ -40,6 +54,8 @@ void Interface::setup() {
   for (int i = 0; i < (sizeof(button_led_pins) / sizeof(button_led_pins[0])); i++) {
     pinMode(button_led_pins[i], OUTPUT);
   }
+
+  lcd.begin(LCD_COL, LCD_ROW);
 }
 
 void Interface::loop() {
@@ -62,6 +78,18 @@ void Interface::loop() {
 
 void Interface::setButtonLighting(int index, bool isHigh) {
   digitalWrite(button_led_pins[index], isHigh);
+}
+
+void Interface::clearLCD() {
+  lcd.clear();
+}
+
+void Interface::setCursorLCD(int col, int row) {
+  lcd.setCursor(col, row);
+}
+
+void Interface::printLCD(String str) {
+  lcd.print(str);
 }
 
 // ロジック移動していくための、一時的な退避

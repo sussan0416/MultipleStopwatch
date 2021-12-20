@@ -1,4 +1,5 @@
 #include "CustomTypes.h"
+#include <Arduino.h>
 
 class Interface {
   public:
@@ -8,4 +9,8 @@ class Interface {
     int getNumberOfButtons();
     Button getButtonState(int index);
     void setButtonLighting(int index, bool isHigh);
+
+    void clearLCD();
+    void setCursorLCD(int col, int row);
+    void printLCD(String str);
 };
