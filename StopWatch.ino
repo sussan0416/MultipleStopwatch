@@ -1,6 +1,5 @@
 #include "Interface.h"
 #include <Ticker.h>
-#include "Backlight.h"
 #include "NTP.h"
 #include "Env.h"
 #include <WiFi.h>
@@ -21,9 +20,6 @@ Measure measure_states[] = {
 
 // Buttons
 const char button_chars[] = {'A', 'B', 'C', 'D', 'E'};
-
-// Backlight
-Backlight backlight;
 
 // Tickers
 Ticker measurement_ticker;
@@ -91,8 +87,6 @@ void setup() {
   interface.setup();
   
   Serial.begin(115200);
-
-  backlight.begin();
 
   interface.printLCD("Connecting to Wi-Fi");
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -170,9 +164,6 @@ void loop() {
   }
 
   interface.endLoop();
-
-  // バックライト
-  backlight.onLoop();
 
   delay(10);
 }
