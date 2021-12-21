@@ -48,11 +48,11 @@ void measure() {
 }
 
 void printMeasure() {
+  unsigned long sum = 0;
+
   for (int i = 0; i < (sizeof(measure_states) / sizeof(measure_states[0])); i++) {
     unsigned long t = measured_seconds[i] / 10;
-    char str[32];
-    sprintf(str, "%d: %2d:%02d:%02d, ", i, t / 60 / 60, t / 60 % 60, t % 60);
-    Serial.print(str);
+    sum += t;
 
     unsigned short col = (i % 2 == 0) ? 0 : 10;
     unsigned short row = i / 2;
@@ -62,9 +62,23 @@ void printMeasure() {
     sprintf(lcd_str, "%c%2d:%02d:%02d", button_chars[i], t / 60 / 60, t / 60 % 60, t % 60);
     interface.printLCD(lcd_str);
   }
-  Serial.println("");
-  interface.setCursorLCD(0, 3);
-  interface.printLCD(ntp.getCurrentTime());
+
+  interface.setCursorLCD(10, 2);
+  interface.printLCD("Total:");
+
+  char str[10];
+  if (sum < 60) {
+    sprintf(str, "     :%02d", sum % 60);
+  } else if (sum < 3600) {
+    sprintf(str, "   %2d:%02d", sum / 60 % 60, sum % 60);
+  } else {
+    sprintf(str, "%2d:%02d:%02d", sum / 60 / 60, sum / 60 % 60, sum % 60);
+  }
+  interface.setCursorLCD(11, 3);
+  interface.printLCD(str);
+
+  interface.setCursorLCD(1, 3);
+  interface.printLCD(ntp.getCurrentTime("%H:%M:%S"));
 }
 
 void stopAllMeasure() {
