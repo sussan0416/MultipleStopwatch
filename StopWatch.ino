@@ -5,6 +5,7 @@
 #include "Output.h"
 #include "AppState.h"
 #include "CountupTimer.h"
+#include "Schedule.h"
 #include "Ota.h"
 #include "Env.h"
 
@@ -89,6 +90,12 @@ void onButtonClick(ButtonLabel label, ClickType type) {
     case TaskTypeView:
       handleInTaskTypeView(label, type);
       break;
+    case PlanSelectView:
+      handleInPlanSelectView(label, type);
+      break;
+    case PlanView:
+      handleInPlanView(label, type);
+      break;
   }
 }
 
@@ -97,6 +104,9 @@ void onButtonClick(ButtonLabel label, ClickType type) {
 void prepareMainView() {
   appState = MainView;
   clearLcd();
+  if (!scheduleTicker.active()) {
+    scheduleTicker.attach(1.0, checkScheduleTime);
+  }
   if (!countUpTicker.active()) {
     countUpTicker.attach(TICKER_COUNTUP_SEC, countUp);
   }
@@ -124,6 +134,10 @@ void handleInMainView(ButtonLabel label, ClickType type) {
         resetCounter(index);
         setLed(index, false);
       } else if (type == ClickType::Short) {
+        if (scheduleStates[index] == Present) {
+          scheduleStates[index] = Past;
+          isNotifyLedOn = false;
+        }
         if (counterStates[index] == Stop) {
           if (taskType == Single) {
             stopAllCounter();
@@ -144,12 +158,14 @@ void handleInMainView(ButtonLabel label, ClickType type) {
 
 void prepareMenuView() {
   appState = MenuView;
+  scheduleTicker.detach();
   countUpTicker.detach();
   mainViewTicker.detach();
   stopAllCounter();
   allLedOff();
   delay(200);
   clearLcd();
+  delay(100);
 
   char line[20];
   String taskTypeString;
@@ -161,15 +177,15 @@ void prepareMenuView() {
       taskTypeString = "Multi";
       break;
   }
-  sprintf(line, "A: %-6s B: Adjust", taskTypeString);
+  sprintf(line, "A: %-6s B: Alarm", taskTypeString);
   setCursorLcd(0, 0);
   printLcd(line);
 
-  setCursorLcd(0, 1);
-  printLcd("C:        D:");
+//  setCursorLcd(0, 1);
+//  printLcd("C: Adjust D:");
 
   setCursorLcd(0, 2);
-  printLcd("E:");
+  printLcd("E: Edit");
 
   setCursorLcd(0, 3);
   printLcd("L: Update R: Return");
@@ -182,6 +198,10 @@ void handleInMenuView(ButtonLabel label, ClickType type) {
       break;
 
     case ButtonLabel::B:
+      preparePlanSelectView();
+      break;
+
+    case ButtonLabel::E:
       prepareSelectTargetView();
       break;
 
@@ -201,6 +221,8 @@ void prepareSelectTargetView() {
   appState = SelectTargetView;
   clearLcd();
   setCursorLcd(0, 0);
+  printLcd("Edit");
+  setCursorLcd(0, 1);
   printLcd("Select a target:");
   setCursorLcd(10, 3);
   printLcd("R: Return");
@@ -236,7 +258,7 @@ void prepareAdjustView(int target) {
   adjustTarget = target;
   clearLcd();
   setCursorLcd(0, 0);
-  printLcd("Adjust:");
+  printLcd(String(char(target + 65))); // 65: A, ..., 69: E
   printAdjustingValue();
   setCursorLcd(0, 1);
   printLcd("A: h+, B: m+, C: s+");
@@ -250,7 +272,7 @@ void printAdjustingValue() {
   unsigned long t = counterSeconds[adjustTarget] / 10;
   char lcd_str[10];
   sprintf(lcd_str, "%2d:%02d:%02d", t / 60 / 60, t / 60 % 60, t % 60);
-  setCursorLcd(10, 0);
+  setCursorLcd(2, 0);
   printLcd(lcd_str);
 }
 
@@ -318,6 +340,137 @@ void handleInTaskTypeView(ButtonLabel label, ClickType type) {
   prepareMenuView();
 }
 
+// ------------ Plan Select View ------------
+
+void preparePlanSelectView() {
+  appState = PlanSelectView;
+  clearLcd();
+  setCursorLcd(0, 0);
+  printLcd("Alarm");
+  setCursorLcd(0, 1);
+  printLcd("Select a target:");
+  setCursorLcd(10, 3);
+  printLcd("R: Return");
+}
+
+void handleInPlanSelectView(ButtonLabel label, ClickType type) {
+  switch (label) {
+    case ButtonLabel::A:
+      preparePlanView(0);
+      break;
+    case ButtonLabel::B:
+      preparePlanView(1);
+      break;
+    case ButtonLabel::C:
+      preparePlanView(2);
+      break;
+    case ButtonLabel::D:
+      preparePlanView(3);
+      break;
+    case ButtonLabel::E:
+      preparePlanView(4);
+      break;
+    case ButtonLabel::R:
+      prepareMenuView();
+      break;
+  }
+}
+
+// ------------- Plan View
+
+void preparePlanView(int target) {
+  appState = PlanView;
+
+  adjustTarget = target;
+  time_t now;
+  struct tm *timeptr;
+  now = time(nullptr);
+  timeptr = localtime(&now);
+  scheduleTimeSeconds[adjustTarget] = 60 * 60 * timeptr->tm_hour + 60 * timeptr->tm_min;
+
+  clearLcd();
+  setCursorLcd(0, 0);
+  printLcd(String(char(target + 65))); // 65: A, ..., 69: E
+  printPlanValue();
+  setCursorLcd(0, 1);
+  printLcd("A: h+, B: m+, C: s+");
+  setCursorLcd(0, 2);
+  printLcd("D: h-, E: m-, L: s-");
+  setCursorLcd(10, 3);
+  printLcd("R: Return");
+}
+
+void printPlanValue() {
+  unsigned long t = scheduleTimeSeconds[adjustTarget];
+  char lcd_str[10];
+  sprintf(lcd_str, "%2d:%02d:%02d", t / 60 / 60, t / 60 % 60, t % 60);
+  setCursorLcd(2, 0);
+  printLcd(lcd_str);
+}
+
+void handleInPlanView(ButtonLabel label, ClickType type) {
+  switch (label) {
+    case ButtonLabel::A:
+      if (scheduleTimeSeconds[adjustTarget] <= 24 * 60 * 60 - 3600 - 1) {
+        scheduleTimeSeconds[adjustTarget] += 3600;
+        printPlanValue();
+      }
+      break;
+    case ButtonLabel::B:
+      if (scheduleTimeSeconds[adjustTarget] <= 24 * 60 * 60 - 60 - 1) {
+        scheduleTimeSeconds[adjustTarget] += 60;
+        printPlanValue();
+      }
+      break;
+    case ButtonLabel::C:
+      if (scheduleTimeSeconds[adjustTarget] <= 24 * 60 * 60 - 1 - 1) {
+        scheduleTimeSeconds[adjustTarget] += 1;
+        printPlanValue();
+      }
+      break;
+    case ButtonLabel::D:
+      if (scheduleTimeSeconds[adjustTarget] >= 3600) {
+        scheduleTimeSeconds[adjustTarget] -= 3600;
+        printPlanValue();
+      }
+      break;
+    case ButtonLabel::E:
+      if (scheduleTimeSeconds[adjustTarget] >= 60) {
+        scheduleTimeSeconds[adjustTarget] -= 60;
+        printPlanValue();
+      }
+      break;
+    case ButtonLabel::L:
+      if (scheduleTimeSeconds[adjustTarget] >= 1) {
+        scheduleTimeSeconds[adjustTarget] -= 1;
+        printPlanValue();
+      }
+      break;
+    case ButtonLabel::R:
+      time_t now;
+      struct tm *timeptr;
+
+      now = time(nullptr);
+      timeptr = localtime(&now);
+
+      unsigned long t = scheduleTimeSeconds[adjustTarget];
+      int hour = t / 60 / 60;
+      int minute = t / 60 % 60;
+      int second = t % 60;
+      timeptr->tm_hour = hour;
+      timeptr->tm_min = minute;
+      timeptr->tm_sec = second;
+
+      time_t scheduled = mktime(timeptr);
+      schedules[adjustTarget] = scheduled;
+      scheduleStates[adjustTarget] = (scheduled - now > 0) ? Future : Past;
+
+      adjustTarget = -1;
+      preparePlanSelectView();
+      break;
+  }
+}
+
 short convertButtonToIndex(ButtonLabel label) {
   switch (label) {
     case ButtonLabel::A:
@@ -378,6 +531,12 @@ void printForTimer() {
 
   setCursorLcd(1, 3);
   printLcd(getCurrentTime("%H:%M:%S"));
+
+  for (int i = 0; i < (sizeof(scheduleStates) / sizeof(scheduleStates[0])); i++) {
+    if (scheduleStates[i] != Present) { continue; }
+    setLed(i, isNotifyLedOn);
+  }
+  isNotifyLedOn = !isNotifyLedOn;
 }
 
 // ---------- Network ----------

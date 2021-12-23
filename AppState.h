@@ -4,6 +4,8 @@ enum AppState {
   SelectTargetView,
   AdjustView,
   TaskTypeView,
+  PlanSelectView,
+  PlanView,
   Ota
 };
 

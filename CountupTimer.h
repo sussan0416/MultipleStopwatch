@@ -16,8 +16,9 @@ TaskType taskType = Single;
 // Tickers
 Ticker countUpTicker;
 Ticker mainViewTicker;
+Ticker scheduleTicker;
 
-unsigned long counterSeconds[] = {0, 0, 0, 0, 0};
+unsigned long counterSeconds[] = {0, 0, 0, 0, 0}; // 1/10 second
 CounterState counterStates[] = {Stop, Stop, Stop, Stop, Stop};
 const char buttonChars[] = {'A', 'B', 'C', 'D', 'E'};
 
