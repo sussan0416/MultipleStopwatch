@@ -81,20 +81,20 @@ void onButtonClick(ButtonLabel label, ClickType type) {
     case MenuView:
       handleInMenuView(label, type);
       break;
-    case SelectTargetView:
-      handleInSelectTargetView(label, type);
+    case EditSelectView:
+      handleInEditSelectView(label, type);
       break;
-    case AdjustView:
-      handleInAdjustView(label, type);
+    case EditView:
+      handleInEditView(label, type);
       break;
     case TaskTypeView:
       handleInTaskTypeView(label, type);
       break;
-    case PlanSelectView:
-      handleInPlanSelectView(label, type);
+    case AlarmSelectView:
+      handleInAlarmSelectView(label, type);
       break;
-    case PlanView:
-      handleInPlanView(label, type);
+    case AlarmView:
+      handleInAlarmView(label, type);
       break;
   }
 }
@@ -177,7 +177,7 @@ void prepareMenuView() {
       taskTypeString = "Multi";
       break;
   }
-  sprintf(line, "A: %-6s B: Alarm", taskTypeString);
+  sprintf(line, "A: Alarm  B: %-6s", taskTypeString);
   setCursorLcd(0, 0);
   printLcd(line);
 
@@ -194,15 +194,15 @@ void prepareMenuView() {
 void handleInMenuView(ButtonLabel label, ClickType type) {
   switch (label) {
     case ButtonLabel::A:
-      prepareTaskTypeView();
+      prepareAlarmSelectView();
       break;
 
     case ButtonLabel::B:
-      preparePlanSelectView();
+      prepareTaskTypeView();
       break;
 
     case ButtonLabel::E:
-      prepareSelectTargetView();
+      prepareEditSelectView();
       break;
 
     case ButtonLabel::L:
@@ -215,10 +215,10 @@ void handleInMenuView(ButtonLabel label, ClickType type) {
   }
 }
 
-// ------------ Select Adjust -----------
+// ------------ Edit Select -----------
 
-void prepareSelectTargetView() {
-  appState = SelectTargetView;
+void prepareEditSelectView() {
+  appState = EditSelectView;
   clearLcd();
   setCursorLcd(0, 0);
   printLcd("Edit");
@@ -228,22 +228,22 @@ void prepareSelectTargetView() {
   printLcd("R: Return");
 }
 
-void handleInSelectTargetView(ButtonLabel label, ClickType type) {
+void handleInEditSelectView(ButtonLabel label, ClickType type) {
   switch (label) {
     case ButtonLabel::A:
-      prepareAdjustView(0);
+      prepareEditView(0);
       break;
     case ButtonLabel::B:
-      prepareAdjustView(1);
+      prepareEditView(1);
       break;
     case ButtonLabel::C:
-      prepareAdjustView(2);
+      prepareEditView(2);
       break;
     case ButtonLabel::D:
-      prepareAdjustView(3);
+      prepareEditView(3);
       break;
     case ButtonLabel::E:
-      prepareAdjustView(4);
+      prepareEditView(4);
       break;
     case ButtonLabel::R:
       prepareMenuView();
@@ -251,15 +251,15 @@ void handleInSelectTargetView(ButtonLabel label, ClickType type) {
   }
 }
 
-// ---------- Adjust -------------
+// ---------- Edit -------------
 
-void prepareAdjustView(int target) {
-  appState = AdjustView;
+void prepareEditView(int target) {
+  appState = EditView;
   adjustTarget = target;
   clearLcd();
   setCursorLcd(0, 0);
   printLcd(String(char(target + 65))); // 65: A, ..., 69: E
-  printAdjustingValue();
+  printEditingValue();
   setCursorLcd(0, 1);
   printLcd("A: h+, B: m+, C: s+");
   setCursorLcd(0, 2);
@@ -268,7 +268,7 @@ void prepareAdjustView(int target) {
   printLcd("R: Return");
 }
 
-void printAdjustingValue() {
+void printEditingValue() {
   unsigned long t = counterSeconds[adjustTarget] / 10;
   char lcd_str[10];
   sprintf(lcd_str, "%2d:%02d:%02d", t / 60 / 60, t / 60 % 60, t % 60);
@@ -276,41 +276,41 @@ void printAdjustingValue() {
   printLcd(lcd_str);
 }
 
-void handleInAdjustView(ButtonLabel label, ClickType type) {
+void handleInEditView(ButtonLabel label, ClickType type) {
   switch (label) {
     case ButtonLabel::A:
       counterSeconds[adjustTarget] += 36000;
-      printAdjustingValue();
+      printEditingValue();
       break;
     case ButtonLabel::B:
       counterSeconds[adjustTarget] += 600;
-      printAdjustingValue();
+      printEditingValue();
       break;
     case ButtonLabel::C:
       counterSeconds[adjustTarget] += 10;
-      printAdjustingValue();
+      printEditingValue();
       break;
     case ButtonLabel::D:
       if (counterSeconds[adjustTarget] >= 36000) {
         counterSeconds[adjustTarget] -= 36000;
-        printAdjustingValue();
+        printEditingValue();
       }
       break;
     case ButtonLabel::E:
       if (counterSeconds[adjustTarget] >= 600) {
         counterSeconds[adjustTarget] -= 600;
-        printAdjustingValue();
+        printEditingValue();
       }
       break;
     case ButtonLabel::L:
       if (counterSeconds[adjustTarget] >= 10) {
         counterSeconds[adjustTarget] -= 10;
-        printAdjustingValue();
+        printEditingValue();
       }
       break;
     case ButtonLabel::R:
       adjustTarget = -1;
-      prepareSelectTargetView();
+      prepareEditSelectView();
       break;
   }
 }
@@ -342,8 +342,8 @@ void handleInTaskTypeView(ButtonLabel label, ClickType type) {
 
 // ------------ Plan Select View ------------
 
-void preparePlanSelectView() {
-  appState = PlanSelectView;
+void prepareAlarmSelectView() {
+  appState = AlarmSelectView;
   clearLcd();
   setCursorLcd(0, 0);
   printLcd("Alarm");
@@ -353,22 +353,22 @@ void preparePlanSelectView() {
   printLcd("R: Return");
 }
 
-void handleInPlanSelectView(ButtonLabel label, ClickType type) {
+void handleInAlarmSelectView(ButtonLabel label, ClickType type) {
   switch (label) {
     case ButtonLabel::A:
-      preparePlanView(0);
+      prepareAlarmView(0);
       break;
     case ButtonLabel::B:
-      preparePlanView(1);
+      prepareAlarmView(1);
       break;
     case ButtonLabel::C:
-      preparePlanView(2);
+      prepareAlarmView(2);
       break;
     case ButtonLabel::D:
-      preparePlanView(3);
+      prepareAlarmView(3);
       break;
     case ButtonLabel::E:
-      preparePlanView(4);
+      prepareAlarmView(4);
       break;
     case ButtonLabel::R:
       prepareMenuView();
@@ -376,10 +376,10 @@ void handleInPlanSelectView(ButtonLabel label, ClickType type) {
   }
 }
 
-// ------------- Plan View
+// ------------- Alarm View
 
-void preparePlanView(int target) {
-  appState = PlanView;
+void prepareAlarmView(int target) {
+  appState = AlarmView;
 
   adjustTarget = target;
   time_t now;
@@ -391,7 +391,7 @@ void preparePlanView(int target) {
   clearLcd();
   setCursorLcd(0, 0);
   printLcd(String(char(target + 65))); // 65: A, ..., 69: E
-  printPlanValue();
+  printAlarmValue();
   setCursorLcd(0, 1);
   printLcd("A: h+, B: m+, C: s+");
   setCursorLcd(0, 2);
@@ -400,7 +400,7 @@ void preparePlanView(int target) {
   printLcd("R: Return");
 }
 
-void printPlanValue() {
+void printAlarmValue() {
   unsigned long t = scheduleTimeSeconds[adjustTarget];
   char lcd_str[10];
   sprintf(lcd_str, "%2d:%02d:%02d", t / 60 / 60, t / 60 % 60, t % 60);
@@ -408,42 +408,42 @@ void printPlanValue() {
   printLcd(lcd_str);
 }
 
-void handleInPlanView(ButtonLabel label, ClickType type) {
+void handleInAlarmView(ButtonLabel label, ClickType type) {
   switch (label) {
     case ButtonLabel::A:
       if (scheduleTimeSeconds[adjustTarget] <= 24 * 60 * 60 - 3600 - 1) {
         scheduleTimeSeconds[adjustTarget] += 3600;
-        printPlanValue();
+        printAlarmValue();
       }
       break;
     case ButtonLabel::B:
       if (scheduleTimeSeconds[adjustTarget] <= 24 * 60 * 60 - 60 - 1) {
         scheduleTimeSeconds[adjustTarget] += 60;
-        printPlanValue();
+        printAlarmValue();
       }
       break;
     case ButtonLabel::C:
       if (scheduleTimeSeconds[adjustTarget] <= 24 * 60 * 60 - 1 - 1) {
         scheduleTimeSeconds[adjustTarget] += 1;
-        printPlanValue();
+        printAlarmValue();
       }
       break;
     case ButtonLabel::D:
       if (scheduleTimeSeconds[adjustTarget] >= 3600) {
         scheduleTimeSeconds[adjustTarget] -= 3600;
-        printPlanValue();
+        printAlarmValue();
       }
       break;
     case ButtonLabel::E:
       if (scheduleTimeSeconds[adjustTarget] >= 60) {
         scheduleTimeSeconds[adjustTarget] -= 60;
-        printPlanValue();
+        printAlarmValue();
       }
       break;
     case ButtonLabel::L:
       if (scheduleTimeSeconds[adjustTarget] >= 1) {
         scheduleTimeSeconds[adjustTarget] -= 1;
-        printPlanValue();
+        printAlarmValue();
       }
       break;
     case ButtonLabel::R:
@@ -466,7 +466,7 @@ void handleInPlanView(ButtonLabel label, ClickType type) {
       scheduleStates[adjustTarget] = (scheduled - now > 0) ? Future : Past;
 
       adjustTarget = -1;
-      preparePlanSelectView();
+      prepareAlarmSelectView();
       break;
   }
 }

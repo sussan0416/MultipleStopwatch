@@ -1,11 +1,11 @@
 enum AppState {
   MainView,
   MenuView,
-  SelectTargetView,
-  AdjustView,
+  EditSelectView,
+  EditView,
   TaskTypeView,
-  PlanSelectView,
-  PlanView,
+  AlarmSelectView,
+  AlarmView,
   Ota
 };
 
