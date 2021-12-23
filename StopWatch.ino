@@ -150,9 +150,6 @@ void prepareMenuView() {
   allLedOff();
   delay(200);
   clearLcd();
-  setCursorLcd(0, 0);
-  printLcd("A: Adjust B: All 0");
-  setCursorLcd(0, 1);
 
   char line[20];
   String taskTypeString;
@@ -164,8 +161,12 @@ void prepareMenuView() {
       taskTypeString = "Multi";
       break;
   }
-  sprintf(line, "C: %-6s D: %-6s", taskTypeString, "");
+  sprintf(line, "A: %-6s B: Adjust", taskTypeString);
+  setCursorLcd(0, 0);
   printLcd(line);
+
+  setCursorLcd(0, 1);
+  printLcd("C:        D:");
 
   setCursorLcd(0, 2);
   printLcd("E:");
@@ -177,15 +178,11 @@ void prepareMenuView() {
 void handleInMenuView(ButtonLabel label, ClickType type) {
   switch (label) {
     case ButtonLabel::A:
-      prepareSelectTargetView();
+      prepareTaskTypeView();
       break;
 
     case ButtonLabel::B:
-      resetAllCounter();
-      break;
-
-    case ButtonLabel::C:
-      prepareTaskTypeView();
+      prepareSelectTargetView();
       break;
 
     case ButtonLabel::L:
