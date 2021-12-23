@@ -4,11 +4,11 @@ enum CounterState {
   Stop, Run
 };
 
-enum TimerMode {
+enum TaskType {
   Single, Multiple
 };
 
-TimerMode timerMode = Single;
+TaskType taskType = Single;
 
 #define TICKER_COUNTUP_SEC 0.1
 #define TICKER_PRINT_SEC 0.2
@@ -21,9 +21,17 @@ unsigned long counterSeconds[] = {0, 0, 0, 0, 0};
 CounterState counterStates[] = {Stop, Stop, Stop, Stop, Stop};
 const char buttonChars[] = {'A', 'B', 'C', 'D', 'E'};
 
+short adjustTarget = -1;
+
 void resetCounter(short index) {
   counterSeconds[index] = 0;
   counterStates[index] = Stop;
+}
+
+void resetAllCounter() {
+  for (int i = 0; i < (sizeof(counterStates) / sizeof(counterStates[0])); i++) {
+    counterSeconds[i] = 0;
+  }
 }
 
 void startCounter(short index) {

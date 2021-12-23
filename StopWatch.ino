@@ -21,8 +21,7 @@ void setup() {
   printLcd("NTP Sync...");
   ntpSync();
 
-  setupApp();
-  clearLcd();
+  prepareMainView();
 }
 
 void loop() {
@@ -65,13 +64,8 @@ void loopInput() {
 
 // ------------ app ----------
 
-void setupApp() {
-  countUpTicker.attach(TICKER_COUNTUP_SEC, countUp);
-  mainViewTicker.attach(TICKER_PRINT_SEC, printForTimer);
-}
-
 void loopApp() {
-  if (appState == AppState::Ota) {
+  if (appState == Ota) {
     handleClientOta();
   }
 
@@ -80,24 +74,44 @@ void loopApp() {
 
 void onButtonClick(ButtonLabel label, ClickType type) {
   switch (appState) {
-    case AppState::MainView:
+    case MainView:
       handleInMainView(label, type);
+      break;
+    case MenuView:
+      handleInMenuView(label, type);
+      break;
+    case SelectTargetView:
+      handleInSelectTargetView(label, type);
+      break;
+    case AdjustView:
+      handleInAdjustView(label, type);
+      break;
+    case TaskTypeView:
+      handleInTaskTypeView(label, type);
+      break;
+  }
+}
+
+// ----------------- Main -----------------
+
+void prepareMainView() {
+  appState = MainView;
+  clearLcd();
+  if (!countUpTicker.active()) {
+    countUpTicker.attach(TICKER_COUNTUP_SEC, countUp);
+  }
+  if (!mainViewTicker.active()) {
+    mainViewTicker.attach(TICKER_PRINT_SEC, printForTimer);
+  }
+  for (int i = 0; i < (sizeof(counterStates) / sizeof(counterStates[0])); i++) {
+    setLed(i, counterStates[i] == Run);
   }
 }
 
 void handleInMainView(ButtonLabel label, ClickType type) {
   switch (label) {
     case ButtonLabel::R:
-      countUpTicker.detach();
-      mainViewTicker.detach();
-      stopAllCounter();
-      allLedOff();
-      appState = AppState::Ota;
-      clearLcd();
-      setCursorLcd(0, 0);
-      printLcd("OTA Mode");
-      setCursorLcd(0, 1);
-      printLcd("http://timer.local");
+      prepareMenuView();
       break;
 
     case ButtonLabel::L:
@@ -106,25 +120,205 @@ void handleInMainView(ButtonLabel label, ClickType type) {
 
     default:
       short index = convertButtonToIndex(label);
-      LedLabel led = convertButtonToLed(label);
       if (type == ClickType::Long) {
         resetCounter(index);
-        setLed(led, false);
+        setLed(index, false);
       } else if (type == ClickType::Short) {
         if (counterStates[index] == Stop) {
-          if (timerMode == Single) {
+          if (taskType == Single) {
             stopAllCounter();
             allLedOff();
           }
           startCounter(index);
-          setLed(led, true);
+          setLed(index, true);
         } else {
           stopCounter(index);
-          setLed(led, false);
+          setLed(index, false);
         }
       }
       break;
   }
+}
+
+// -------------- Menu -----------------
+
+void prepareMenuView() {
+  appState = MenuView;
+  countUpTicker.detach();
+  mainViewTicker.detach();
+  stopAllCounter();
+  allLedOff();
+  delay(200);
+  clearLcd();
+  setCursorLcd(0, 0);
+  printLcd("A: Adjust B: All 0");
+  setCursorLcd(0, 1);
+
+  char line[20];
+  String taskTypeString;
+  switch (taskType) {
+    case Single:
+      taskTypeString = "Single";
+      break;
+    case Multiple:
+      taskTypeString = "Multi";
+      break;
+  }
+  sprintf(line, "C: %-6s D: %-6s", taskTypeString, "");
+  printLcd(line);
+
+  setCursorLcd(0, 2);
+  printLcd("E:");
+
+  setCursorLcd(0, 3);
+  printLcd("L: Update R: Return");
+}
+
+void handleInMenuView(ButtonLabel label, ClickType type) {
+  switch (label) {
+    case ButtonLabel::A:
+      prepareSelectTargetView();
+      break;
+
+    case ButtonLabel::B:
+      resetAllCounter();
+      break;
+
+    case ButtonLabel::C:
+      prepareTaskTypeView();
+      break;
+
+    case ButtonLabel::L:
+      prepareOtaMode();
+      break;
+
+    case ButtonLabel::R:
+      prepareMainView();
+      break;
+  }
+}
+
+// ------------ Select Adjust -----------
+
+void prepareSelectTargetView() {
+  appState = SelectTargetView;
+  clearLcd();
+  setCursorLcd(0, 0);
+  printLcd("Select a target:");
+  setCursorLcd(10, 3);
+  printLcd("R: Return");
+}
+
+void handleInSelectTargetView(ButtonLabel label, ClickType type) {
+  switch (label) {
+    case ButtonLabel::A:
+      prepareAdjustView(0);
+      break;
+    case ButtonLabel::B:
+      prepareAdjustView(1);
+      break;
+    case ButtonLabel::C:
+      prepareAdjustView(2);
+      break;
+    case ButtonLabel::D:
+      prepareAdjustView(3);
+      break;
+    case ButtonLabel::E:
+      prepareAdjustView(4);
+      break;
+    case ButtonLabel::R:
+      prepareMenuView();
+      break;
+  }
+}
+
+// ---------- Adjust -------------
+
+void prepareAdjustView(int target) {
+  appState = AdjustView;
+  adjustTarget = target;
+  clearLcd();
+  setCursorLcd(0, 0);
+  printLcd("Adjust:");
+  printAdjustingValue();
+  setCursorLcd(0, 1);
+  printLcd("A: h+, B: m+, C: s+");
+  setCursorLcd(0, 2);
+  printLcd("D: h-, E: m-, L: s-");
+  setCursorLcd(10, 3);
+  printLcd("R: Return");
+}
+
+void printAdjustingValue() {
+  unsigned long t = counterSeconds[adjustTarget] / 10;
+  char lcd_str[10];
+  sprintf(lcd_str, "%2d:%02d:%02d", t / 60 / 60, t / 60 % 60, t % 60);
+  setCursorLcd(10, 0);
+  printLcd(lcd_str);
+}
+
+void handleInAdjustView(ButtonLabel label, ClickType type) {
+  switch (label) {
+    case ButtonLabel::A:
+      counterSeconds[adjustTarget] += 36000;
+      printAdjustingValue();
+      break;
+    case ButtonLabel::B:
+      counterSeconds[adjustTarget] += 600;
+      printAdjustingValue();
+      break;
+    case ButtonLabel::C:
+      counterSeconds[adjustTarget] += 10;
+      printAdjustingValue();
+      break;
+    case ButtonLabel::D:
+      if (counterSeconds[adjustTarget] >= 36000) {
+        counterSeconds[adjustTarget] -= 36000;
+        printAdjustingValue();
+      }
+      break;
+    case ButtonLabel::E:
+      if (counterSeconds[adjustTarget] >= 600) {
+        counterSeconds[adjustTarget] -= 600;
+        printAdjustingValue();
+      }
+      break;
+    case ButtonLabel::L:
+      if (counterSeconds[adjustTarget] >= 10) {
+        counterSeconds[adjustTarget] -= 10;
+        printAdjustingValue();
+      }
+      break;
+    case ButtonLabel::R:
+      adjustTarget = -1;
+      prepareSelectTargetView();
+      break;
+  }
+}
+
+// ----------- TaskTypeView ------------
+
+void prepareTaskTypeView() {
+  appState = TaskTypeView;
+  clearLcd();
+  setCursorLcd(0, 0);
+  printLcd("A: Single, B: Multi");
+  setCursorLcd(10, 3);
+  printLcd("R: Return");
+}
+
+void handleInTaskTypeView(ButtonLabel label, ClickType type) {
+  switch (label) {
+    case ButtonLabel::A:
+      taskType = Single;
+      break;
+    case ButtonLabel::B:
+      taskType = Multiple;
+      break;
+    case ButtonLabel::R:
+      break;
+  }
+  prepareMenuView();
 }
 
 short convertButtonToIndex(ButtonLabel label) {
@@ -144,21 +338,16 @@ short convertButtonToIndex(ButtonLabel label) {
   }
 }
 
-LedLabel convertButtonToLed(ButtonLabel label) {
-  switch (label) {
-    case ButtonLabel::A:
-      return LedLabel::A;
-    case ButtonLabel::B:
-      return LedLabel::B;
-    case ButtonLabel::C:
-      return LedLabel::C;
-    case ButtonLabel::D:
-      return LedLabel::D;
-    case ButtonLabel::E:
-      return LedLabel::E;
-    default:
-      exit(1);
-  }
+// ----------------- Ota --------------
+
+void prepareOtaMode() {
+  allLedOff();
+  appState = Ota;
+  clearLcd();
+  setCursorLcd(0, 0);
+  printLcd("OTA Mode");
+  setCursorLcd(0, 1);
+  printLcd("http://timer.local");
 }
 
 void printForTimer() {

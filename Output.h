@@ -1,6 +1,6 @@
 #include <LiquidCrystal.h>
 
-enum class LedLabel {
+enum LedLabel {
   A, B, C, D, E
 };
 
@@ -22,11 +22,11 @@ class Led {
 #define BUTTON_D_LED_OUT_PIN 27
 #define BUTTON_E_LED_OUT_PIN 14
 
-Led ledA(BUTTON_A_LED_OUT_PIN, LedLabel::A);
-Led ledB(BUTTON_B_LED_OUT_PIN, LedLabel::B);
-Led ledC(BUTTON_C_LED_OUT_PIN, LedLabel::C);
-Led ledD(BUTTON_D_LED_OUT_PIN, LedLabel::D);
-Led ledE(BUTTON_E_LED_OUT_PIN, LedLabel::E);
+Led ledA(BUTTON_A_LED_OUT_PIN, A);
+Led ledB(BUTTON_B_LED_OUT_PIN, B);
+Led ledC(BUTTON_C_LED_OUT_PIN, C);
+Led ledD(BUTTON_D_LED_OUT_PIN, D);
+Led ledE(BUTTON_E_LED_OUT_PIN, E);
 
 Led leds[] = {ledA, ledB, ledC, ledD, ledE};
 
@@ -58,21 +58,21 @@ void setupOutput() {
   lcd.begin(LCD_COL, LCD_ROW);
 }
 
-void setLed(LedLabel label, bool isHigh) {
-  switch (label) {
-    case LedLabel::A:
+void setLed(int index, bool isHigh) {
+  switch (index) {
+    case 0:
       digitalWrite(ledA.pin, isHigh);
       break;
-    case LedLabel::B:
+    case 1:
       digitalWrite(ledB.pin, isHigh);
       break;
-    case LedLabel::C:
+    case 2:
       digitalWrite(ledC.pin, isHigh);
       break;
-    case LedLabel::D:
+    case 3:
       digitalWrite(ledD.pin, isHigh);
       break;
-    case LedLabel::E:
+    case 4:
       digitalWrite(ledE.pin, isHigh);
       break;
   }

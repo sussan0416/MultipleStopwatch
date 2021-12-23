@@ -7,7 +7,7 @@
 #define BUTTON_R_PIN 4
 
 #define BUTTON_SHORT_COUNT 3
-#define BUTTON_LONG_COUNT 200
+#define BUTTON_LONG_COUNT 100
 
 enum class ButtonLabel {
   A, B, C, D, E, L, R
