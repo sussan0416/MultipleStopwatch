@@ -44,21 +44,29 @@ void loopInput() {
     Button &btn = buttons[i];
 
     if (digitalRead(btn.pin) == LOW) {
-      if (btn.count < BUTTON_LONG_COUNT) {
-        btn.count++;
-      } else {
-        if (!btn.isEventFired) {
+      if (btn.isHolding) {
+        if (btn.count < BUTTON_HOLD_COUNT) {
+          btn.count++;
+        } else {
           onButtonClick(btn.label, ClickType::Long);
-          btn.isEventFired = true;
+          btn.count = 0;
+        }
+      } else {
+        if (btn.count < BUTTON_LONG_COUNT) {
+          btn.count++;
+        } else {
+          onButtonClick(btn.label, ClickType::Long);
+          btn.count = 0;
+          btn.isHolding = true;
         }
       }
     } else {
-      if (btn.count > BUTTON_SHORT_COUNT && btn.count < BUTTON_LONG_COUNT) {
+      if (!btn.isHolding && btn.count > BUTTON_SHORT_COUNT && btn.count < BUTTON_LONG_COUNT) {
         onButtonClick(btn.label, ClickType::Short);
       }
 
       btn.count = 0;
-      btn.isEventFired = false;
+      btn.isHolding = false;
     }
   }
 }
@@ -187,8 +195,8 @@ void prepareMenuView() {
   setCursorLcd(0, 2);
   printLcd("E: Edit");
 
-  setCursorLcd(0, 3);
-  printLcd("L: Update R: Return");
+  setCursorLcd(10, 3);
+  printLcd("R: Return");
 }
 
 void handleInMenuView(ButtonLabel label, ClickType type) {
@@ -206,7 +214,9 @@ void handleInMenuView(ButtonLabel label, ClickType type) {
       break;
 
     case ButtonLabel::L:
-      prepareOtaMode();
+      if (type == ClickType::Long) {
+        prepareOtaMode();
+      }
       break;
 
     case ButtonLabel::R:
@@ -495,7 +505,7 @@ void prepareOtaMode() {
   appState = Ota;
   clearLcd();
   setCursorLcd(0, 0);
-  printLcd("OTA Mode");
+  printLcd("OTA Update Mode");
   setCursorLcd(0, 1);
   printLcd("http://timer.local");
 }
