@@ -6,7 +6,7 @@ bool isNotifyLedOn = false;
 
 time_t schedules[] = {0, 0, 0, 0, 0};
 ScheduleState scheduleStates[] = {Past, Past, Past, Past, Past};
-unsigned long scheduleTimeSeconds[] = {0, 0, 0, 0, 0}; // 1 second
+unsigned int scheduleTimeSeconds[] = {0, 0, 0, 0, 0}; // 1 second
 
 void checkScheduleTime() {
   for (int i = 0; i < (sizeof(scheduleStates) / sizeof(scheduleStates[0])); i++) {

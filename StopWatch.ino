@@ -137,7 +137,7 @@ void handleInMainView(ButtonLabel label, ClickType type) {
       break;
 
     default:
-      short index = convertButtonToIndex(label);
+      int index = convertButtonToIndex(label);
       if (type == ClickType::Long) {
         resetCounter(index);
         setLed(index, false);
@@ -481,7 +481,7 @@ void handleInAlarmView(ButtonLabel label, ClickType type) {
   }
 }
 
-short convertButtonToIndex(ButtonLabel label) {
+int convertButtonToIndex(ButtonLabel label) {
   switch (label) {
     case ButtonLabel::A:
       return 0;
@@ -516,8 +516,8 @@ void printForTimer() {
     unsigned long t = counterSeconds[i] / 10;
     sum += t;
 
-    unsigned short col = (i % 2 == 0) ? 0 : 10;
-    unsigned short row = i / 2;
+    unsigned int col = (i % 2 == 0) ? 0 : 10;
+    unsigned int row = i / 2;
     setCursorLcd(col, row);
 
     char lcd_str[10];  // LCD has 20 chars per row. 20 / 2 = 10.
