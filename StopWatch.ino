@@ -112,9 +112,6 @@ void onButtonClick(ButtonLabel label, ClickType type) {
 void prepareMainView() {
   appState = MainView;
   clearLcd();
-  if (!scheduleTicker.active()) {
-    scheduleTicker.attach(1.0, checkScheduleTime);
-  }
   if (!countUpTicker.active()) {
     countUpTicker.attach(TICKER_COUNTUP_SEC, countUp);
   }
@@ -167,7 +164,6 @@ void handleInMainView(ButtonLabel label, ClickType type) {
 
 void prepareMenuView() {
   appState = MenuView;
-  scheduleTicker.detach();
   countUpTicker.detach();
   mainViewTicker.detach();
   stopAllCounter();
@@ -532,6 +528,20 @@ void printForTimer() {
   printLcd(totalTime);
 
   // アラーム残り時間
+  for (int i = 0; i < (sizeof(scheduleStates) / sizeof(scheduleStates[0])); i++) {
+    if (scheduleStates[i] == Past) { continue; }
+
+    int remainSeconds = schedules[i] - time(nullptr);
+    if (remainSecondsForDisplay >= remainSeconds) {
+      remainSecondsForDisplay = remainSeconds;
+    }
+
+    if (scheduleStates[i] == Present) { continue; }
+    if (schedules[i] - time(nullptr) > 0) { continue; }  // Future State
+
+    scheduleStates[i] = Present;
+  }
+
   char remaiTimeStr[] = "          ";
   if (remainSecondsForDisplay != remainSecondsDefaultValue) {
     int remain = abs(remainSecondsForDisplay);

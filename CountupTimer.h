@@ -16,7 +16,6 @@ TaskType taskType = Single;
 // Tickers
 Ticker countUpTicker;
 Ticker mainViewTicker;
-Ticker scheduleTicker;
 
 unsigned int counterSeconds[] = {0, 0, 0, 0, 0}; // 1/10 second
 CounterState counterStates[] = {Stop, Stop, Stop, Stop, Stop};
