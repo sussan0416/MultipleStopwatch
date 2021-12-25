@@ -144,6 +144,7 @@ void handleInMainView(ButtonLabel label, ClickType type) {
       } else if (type == ClickType::Short) {
         if (scheduleStates[index] == Present) {
           scheduleStates[index] = Past;
+          remainSecondsForDisplay = remainSecondsDefaultValue;
           isNotifyLedOn = false;
         }
         if (counterStates[index] == Stop) {
@@ -175,25 +176,13 @@ void prepareMenuView() {
   clearLcd();
   delay(100);
 
-  char line[20];
-  String taskTypeString;
-  switch (taskType) {
-    case Single:
-      taskTypeString = "Single";
-      break;
-    case Multiple:
-      taskTypeString = "Multi";
-      break;
-  }
-  sprintf(line, "A: Alarm  B: %-6s", taskTypeString);
   setCursorLcd(0, 0);
-  printLcd(line);
+  printLcd("A: Alarm  B: Edit");
 
-//  setCursorLcd(0, 1);
-//  printLcd("C: Adjust D:");
-
-  setCursorLcd(0, 2);
-  printLcd("E: Edit");
+  if (taskType == Multiple) {
+    setCursorLcd(0, 2);
+    printLcd("E: Multi");
+  }
 
   setCursorLcd(10, 3);
   printLcd("R: Return");
@@ -206,11 +195,13 @@ void handleInMenuView(ButtonLabel label, ClickType type) {
       break;
 
     case ButtonLabel::B:
-      prepareTaskTypeView();
+      prepareEditSelectView();
       break;
 
     case ButtonLabel::E:
-      prepareEditSelectView();
+      if (type == ClickType::Long) {
+        prepareTaskTypeView();
+      }
       break;
 
     case ButtonLabel::L:
@@ -340,14 +331,16 @@ void handleInTaskTypeView(ButtonLabel label, ClickType type) {
   switch (label) {
     case ButtonLabel::A:
       taskType = Single;
+      prepareMenuView();
       break;
     case ButtonLabel::B:
       taskType = Multiple;
+      prepareMenuView();
       break;
     case ButtonLabel::R:
+      prepareMenuView();
       break;
   }
-  prepareMenuView();
 }
 
 // ------------ Plan Select View ------------
@@ -511,13 +504,18 @@ void prepareOtaMode() {
 }
 
 void printForTimer() {
+  // 現在時刻
+  setCursorLcd(1, 0);
+  printLcd(getCurrentTime("%H:%M:%S"));
+
+  // 各計測値
   unsigned long sum = 0;
   for (int i = 0; i < (sizeof(counterSeconds) / sizeof(counterSeconds[0])); i++) {
     unsigned long t = counterSeconds[i] / 10;
     sum += t;
 
     unsigned int col = (i % 2 == 0) ? 0 : 10;
-    unsigned int row = i / 2;
+    unsigned int row = i / 2 + 1;
     setCursorLcd(col, row);
 
     char lcd_str[10];  // LCD has 20 chars per row. 20 / 2 = 10.
@@ -525,23 +523,32 @@ void printForTimer() {
     printLcd(lcd_str);
   }
 
-  setCursorLcd(10, 2);
-  printLcd("Total:");
-
+  // 合計時間
   char str[10];
-  if (sum < 60) {
-    sprintf(str, "     :%02d", sum % 60);
-  } else if (sum < 3600) {
-    sprintf(str, "   %2d:%02d", sum / 60 % 60, sum % 60);
-  } else {
-    sprintf(str, "%2d:%02d:%02d", sum / 60 / 60, sum / 60 % 60, sum % 60);
+  sprintf(str, "%d:%02d", sum / 60 / 60, sum / 60 % 60);
+  char totalTime[10];
+  sprintf(totalTime, "%9s", str);
+  setCursorLcd(10, 3);
+  printLcd(totalTime);
+
+  // アラーム残り時間
+  char remaiTimeStr[] = "          ";
+  if (remainSecondsForDisplay != remainSecondsDefaultValue) {
+    int remain = abs(remainSecondsForDisplay);
+    if (remain < 60) {
+      sprintf(remaiTimeStr, ":%02d", remain % 60);
+    } else if (remain < 3600) {
+      sprintf(remaiTimeStr, "%2d:%02d", remain / 60 % 60, remain % 60);
+    } else {
+      sprintf(remaiTimeStr, "%2d:%02d:%02d", remain / 60 / 60, remain / 60 % 60, remain % 60);
+    }
   }
-  setCursorLcd(11, 3);
-  printLcd(str);
+  char remainTime[10];
+  sprintf(remainTime, "%9s", remaiTimeStr);
+  setCursorLcd(10, 0);
+  printLcd(remainTime);
 
-  setCursorLcd(1, 3);
-  printLcd(getCurrentTime("%H:%M:%S"));
-
+  // アラームのLED点灯
   for (int i = 0; i < (sizeof(scheduleStates) / sizeof(scheduleStates[0])); i++) {
     if (scheduleStates[i] != Present) { continue; }
     setLed(i, isNotifyLedOn);
