@@ -10,3 +10,9 @@ unsigned int scheduleTimeSeconds[] = {0, 0, 0, 0, 0}; // 1 second
 
 int remainSecondsDefaultValue = 2147483647;  // 32bit int max
 int remainSecondsForDisplay = remainSecondsDefaultValue;
+int nextAlarmIndex = -1;
+
+void resetRemainSeconds() {
+  remainSecondsForDisplay = remainSecondsDefaultValue;
+  nextAlarmIndex = -1;
+}
