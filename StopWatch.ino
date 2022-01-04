@@ -8,6 +8,7 @@
 #include "Schedule.h"
 #include "Ota.h"
 #include "Env.h"
+#include "Slack.h"
 
 void setup() {
   Serial.begin(115200);
@@ -175,6 +176,9 @@ void prepareMenuView() {
   setCursorLcd(0, 0);
   printLcd("A: Alarm  B: Edit");
 
+  setCursorLcd(0, 1);
+  printLcd("C: Report");
+
   if (taskType == Multiple) {
     setCursorLcd(0, 2);
     printLcd("E: Multi");
@@ -194,6 +198,10 @@ void handleInMenuView(ButtonLabel label, ClickType type) {
       prepareEditSelectView();
       break;
 
+    case ButtonLabel::C:
+      report();
+      break;
+
     case ButtonLabel::E:
       if (type == ClickType::Long) {
         prepareTaskTypeView();
@@ -209,6 +217,37 @@ void handleInMenuView(ButtonLabel label, ClickType type) {
     case ButtonLabel::R:
       prepareMainView();
       break;
+  }
+}
+
+void report() {
+  char a[10];
+  char b[10];
+  char c[10];
+  char d[10];
+  char e[10];
+  char t[10];
+  getCounterSeconds(0, a);
+  getCounterSeconds(1, b);
+  getCounterSeconds(2, c);
+  getCounterSeconds(3, d);
+  getCounterSeconds(4, e);
+  getCounterSecondsSum(t);
+
+  char destination[70];
+  time_t now;
+  struct tm *timeptr;
+
+  now = time(nullptr);
+  timeptr = localtime(&now);
+  strftime(destination, sizeof(destination), "%Y-%m-%d %H:%M", timeptr);
+
+  if (sendToSlack(destination, a, b, c, d, e, t)) {
+    setCursorLcd(0, 1);
+    printLcd("C: Done  ");
+  } else {
+    setCursorLcd(0, 1);
+    printLcd("C: Error ");
   }
 }
 

@@ -1,3 +1,4 @@
 Env.h
+SlackEnv.h
 *.bin
 .DS_Store
