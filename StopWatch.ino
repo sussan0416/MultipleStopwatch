@@ -44,21 +44,29 @@ void loopInput() {
     Button &btn = buttons[i];
 
     if (digitalRead(btn.pin) == LOW) {
-      if (btn.count < BUTTON_LONG_COUNT) {
-        btn.count++;
-      } else {
-        if (!btn.isEventFired) {
+      if (btn.isHolding) {
+        if (btn.count < BUTTON_HOLD_COUNT) {
+          btn.count++;
+        } else {
           onButtonClick(btn.label, ClickType::Long);
-          btn.isEventFired = true;
+          btn.count = 0;
+        }
+      } else {
+        if (btn.count < BUTTON_LONG_COUNT) {
+          btn.count++;
+        } else {
+          onButtonClick(btn.label, ClickType::Long);
+          btn.count = 0;
+          btn.isHolding = true;
         }
       }
     } else {
-      if (btn.count > BUTTON_SHORT_COUNT && btn.count < BUTTON_LONG_COUNT) {
+      if (!btn.isHolding && btn.count > BUTTON_SHORT_COUNT && btn.count < BUTTON_LONG_COUNT) {
         onButtonClick(btn.label, ClickType::Short);
       }
 
       btn.count = 0;
-      btn.isEventFired = false;
+      btn.isHolding = false;
     }
   }
 }
@@ -104,9 +112,6 @@ void onButtonClick(ButtonLabel label, ClickType type) {
 void prepareMainView() {
   appState = MainView;
   clearLcd();
-  if (!scheduleTicker.active()) {
-    scheduleTicker.attach(1.0, checkScheduleTime);
-  }
   if (!countUpTicker.active()) {
     countUpTicker.attach(TICKER_COUNTUP_SEC, countUp);
   }
@@ -129,13 +134,14 @@ void handleInMainView(ButtonLabel label, ClickType type) {
       break;
 
     default:
-      short index = convertButtonToIndex(label);
+      int index = convertButtonToIndex(label);
       if (type == ClickType::Long) {
         resetCounter(index);
         setLed(index, false);
       } else if (type == ClickType::Short) {
         if (scheduleStates[index] == Present) {
           scheduleStates[index] = Past;
+          resetRemainSeconds();
           isNotifyLedOn = false;
         }
         if (counterStates[index] == Stop) {
@@ -158,7 +164,6 @@ void handleInMainView(ButtonLabel label, ClickType type) {
 
 void prepareMenuView() {
   appState = MenuView;
-  scheduleTicker.detach();
   countUpTicker.detach();
   mainViewTicker.detach();
   stopAllCounter();
@@ -167,28 +172,16 @@ void prepareMenuView() {
   clearLcd();
   delay(100);
 
-  char line[20];
-  String taskTypeString;
-  switch (taskType) {
-    case Single:
-      taskTypeString = "Single";
-      break;
-    case Multiple:
-      taskTypeString = "Multi";
-      break;
-  }
-  sprintf(line, "A: Alarm  B: %-6s", taskTypeString);
   setCursorLcd(0, 0);
-  printLcd(line);
+  printLcd("A: Alarm  B: Edit");
 
-//  setCursorLcd(0, 1);
-//  printLcd("C: Adjust D:");
+  if (taskType == Multiple) {
+    setCursorLcd(0, 2);
+    printLcd("E: Multi");
+  }
 
-  setCursorLcd(0, 2);
-  printLcd("E: Edit");
-
-  setCursorLcd(0, 3);
-  printLcd("L: Update R: Return");
+  setCursorLcd(10, 3);
+  printLcd("R: Return");
 }
 
 void handleInMenuView(ButtonLabel label, ClickType type) {
@@ -198,15 +191,19 @@ void handleInMenuView(ButtonLabel label, ClickType type) {
       break;
 
     case ButtonLabel::B:
-      prepareTaskTypeView();
-      break;
-
-    case ButtonLabel::E:
       prepareEditSelectView();
       break;
 
+    case ButtonLabel::E:
+      if (type == ClickType::Long) {
+        prepareTaskTypeView();
+      }
+      break;
+
     case ButtonLabel::L:
-      prepareOtaMode();
+      if (type == ClickType::Long) {
+        prepareOtaMode();
+      }
       break;
 
     case ButtonLabel::R:
@@ -330,14 +327,16 @@ void handleInTaskTypeView(ButtonLabel label, ClickType type) {
   switch (label) {
     case ButtonLabel::A:
       taskType = Single;
+      prepareMenuView();
       break;
     case ButtonLabel::B:
       taskType = Multiple;
+      prepareMenuView();
       break;
     case ButtonLabel::R:
+      prepareMenuView();
       break;
   }
-  prepareMenuView();
 }
 
 // ------------ Plan Select View ------------
@@ -464,6 +463,7 @@ void handleInAlarmView(ButtonLabel label, ClickType type) {
       time_t scheduled = mktime(timeptr);
       schedules[adjustTarget] = scheduled;
       scheduleStates[adjustTarget] = (scheduled - now > 0) ? Future : Past;
+      resetRemainSeconds();
 
       adjustTarget = -1;
       prepareAlarmSelectView();
@@ -471,7 +471,7 @@ void handleInAlarmView(ButtonLabel label, ClickType type) {
   }
 }
 
-short convertButtonToIndex(ButtonLabel label) {
+int convertButtonToIndex(ButtonLabel label) {
   switch (label) {
     case ButtonLabel::A:
       return 0;
@@ -495,43 +495,82 @@ void prepareOtaMode() {
   appState = Ota;
   clearLcd();
   setCursorLcd(0, 0);
-  printLcd("OTA Mode");
+  printLcd("OTA Update Mode");
   setCursorLcd(0, 1);
   printLcd("http://timer.local");
 }
 
 void printForTimer() {
+  // 現在時刻
+  setCursorLcd(0, 0);
+  printLcd(getCurrentTime("%H:%M:%S"));
+
+  // 各計測値
   unsigned long sum = 0;
   for (int i = 0; i < (sizeof(counterSeconds) / sizeof(counterSeconds[0])); i++) {
     unsigned long t = counterSeconds[i] / 10;
     sum += t;
 
-    unsigned short col = (i % 2 == 0) ? 0 : 10;
-    unsigned short row = i / 2;
+    unsigned int col = (i % 2 == 0) ? 0 : 11;
+    unsigned int row = i / 2 + 1;
     setCursorLcd(col, row);
 
-    char lcd_str[10];  // LCD has 20 chars per row. 20 / 2 = 10.
+    char lcd_str[9];  // LCD has 20 chars per row. 20 / 2 = 10.
     sprintf(lcd_str, "%c%2d:%02d:%02d", buttonChars[i], t / 60 / 60, t / 60 % 60, t % 60);
     printLcd(lcd_str);
   }
 
-  setCursorLcd(10, 2);
-  printLcd("Total:");
-
+  // 合計時間
   char str[10];
-  if (sum < 60) {
-    sprintf(str, "     :%02d", sum % 60);
-  } else if (sum < 3600) {
-    sprintf(str, "   %2d:%02d", sum / 60 % 60, sum % 60);
-  } else {
-    sprintf(str, "%2d:%02d:%02d", sum / 60 / 60, sum / 60 % 60, sum % 60);
-  }
+  sprintf(str, "%d:%02d", sum / 60 / 60, sum / 60 % 60);
+  char totalTime[9];
+  sprintf(totalTime, "%9s", str);
   setCursorLcd(11, 3);
-  printLcd(str);
+  printLcd(totalTime);
 
-  setCursorLcd(1, 3);
-  printLcd(getCurrentTime("%H:%M:%S"));
+  // アラーム残り時間
+  for (int i = 0; i < (sizeof(scheduleStates) / sizeof(scheduleStates[0])); i++) {
+    if (scheduleStates[i] == Past) { continue; }
 
+    int remainSeconds = schedules[i] - time(nullptr);
+    if (remainSecondsForDisplay >= remainSeconds) {
+      remainSecondsForDisplay = remainSeconds;
+      nextAlarmIndex = i;
+    }
+
+    if (scheduleStates[i] == Present) { continue; }
+    if (schedules[i] - time(nullptr) > 0) { continue; }  // Future State
+
+    scheduleStates[i] = Present;
+  }
+
+  if (nextAlarmIndex != -1) {
+    setCursorLcd(9, 0);
+    writeLcd(arrowChar);
+    setCursorLcd(10, 0);
+    printLcd(String(buttonChars[nextAlarmIndex]));
+
+    char remaiTimeStr[8];
+    if (remainSecondsForDisplay != remainSecondsDefaultValue) {
+      int remain = abs(remainSecondsForDisplay);
+      if (remain < 60) {
+        sprintf(remaiTimeStr, ":%02d", remain % 60);
+      } else if (remain < 3600) {
+        sprintf(remaiTimeStr, "%d:%02d", remain / 60 % 60, remain % 60);
+      } else {
+        sprintf(remaiTimeStr, "%d:%02d:%02d", remain / 60 / 60, remain / 60 % 60, remain % 60);
+      }
+    }
+    char remainTime[8];
+    sprintf(remainTime, "%-8s", remaiTimeStr);
+    setCursorLcd(12, 0);
+    printLcd(remainTime);
+  } else {
+    setCursorLcd(9, 0);
+    printLcd("           ");
+  }
+
+  // アラームのLED点灯
   for (int i = 0; i < (sizeof(scheduleStates) / sizeof(scheduleStates[0])); i++) {
     if (scheduleStates[i] != Present) { continue; }
     setLed(i, isNotifyLedOn);

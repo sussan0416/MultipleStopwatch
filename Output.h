@@ -47,6 +47,17 @@ Led leds[] = {ledA, ledB, ledC, ledD, ledE};
 LiquidCrystal lcd(LCD_RS_PIN, LCD_EN_PIN, LCD_D4_PIN, LCD_D5_PIN, LCD_D6_PIN, LCD_D7_PIN);
 bool isBacklightOn = false;
 
+int arrowChar = 0;
+byte arrow[8] = {
+  B00000,
+  B01000,
+  B01100,
+  B01110,
+  B01100,
+  B01000,
+  B00000,
+};
+
 void setupOutput() {
   for (int i = 0; i < (sizeof(leds) / sizeof(leds[0])); i++) {
     Led led = leds[i];
@@ -56,6 +67,9 @@ void setupOutput() {
   pinMode(BACKLIGHT_PIN, OUTPUT);
 
   lcd.begin(LCD_COL, LCD_ROW);
+  delay(10);
+  lcd.createChar(arrowChar, arrow);
+  delay(10);
 }
 
 void setLed(int index, bool isHigh) {
@@ -99,4 +113,8 @@ void setCursorLcd(int col, int row) {
 
 void printLcd(String str) {
   lcd.print(str);
+}
+
+void writeLcd(int index) {
+  lcd.write(byte(index));
 }

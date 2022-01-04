@@ -16,15 +16,14 @@ TaskType taskType = Single;
 // Tickers
 Ticker countUpTicker;
 Ticker mainViewTicker;
-Ticker scheduleTicker;
 
-unsigned long counterSeconds[] = {0, 0, 0, 0, 0}; // 1/10 second
+unsigned int counterSeconds[] = {0, 0, 0, 0, 0}; // 1/10 second
 CounterState counterStates[] = {Stop, Stop, Stop, Stop, Stop};
 const char buttonChars[] = {'A', 'B', 'C', 'D', 'E'};
 
 short adjustTarget = -1;
 
-void resetCounter(short index) {
+void resetCounter(int index) {
   counterSeconds[index] = 0;
   counterStates[index] = Stop;
 }
@@ -35,11 +34,11 @@ void resetAllCounter() {
   }
 }
 
-void startCounter(short index) {
+void startCounter(int index) {
   counterStates[index] = Run;
 }
 
-void stopCounter(short index) {
+void stopCounter(int index) {
   counterStates[index] = Stop;
 }
 

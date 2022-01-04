@@ -8,6 +8,7 @@
 
 #define BUTTON_SHORT_COUNT 3
 #define BUTTON_LONG_COUNT 100
+#define BUTTON_HOLD_COUNT 10
 
 enum class ButtonLabel {
   A, B, C, D, E, L, R
@@ -22,7 +23,7 @@ class Button {
     int pin;
     unsigned int count = 0;
     ButtonLabel label;
-    bool isEventFired = false;
+    bool isHolding = false;
 };
 
 enum class ClickType {
