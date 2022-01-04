@@ -66,8 +66,10 @@ void setupOutput() {
 
   pinMode(BACKLIGHT_PIN, OUTPUT);
 
-  lcd.createChar(arrowChar, arrow);
   lcd.begin(LCD_COL, LCD_ROW);
+  delay(10);
+  lcd.createChar(arrowChar, arrow);
+  delay(10);
 }
 
 void setLed(int index, bool isHigh) {
