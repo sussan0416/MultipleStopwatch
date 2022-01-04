@@ -55,3 +55,16 @@ void countUp() {
     }
   }
 }
+
+void getCounterSeconds(int i, char *dest) {
+  unsigned int t = counterSeconds[i] / 10;
+  sprintf(dest, "%2d:%02d:%02d", t / 60 / 60, t / 60 % 60, t % 60);
+}
+
+void getCounterSecondsSum(char *dest) {
+  unsigned int sum = 0;
+  for (int i = 0; i < (sizeof(counterSeconds) / sizeof(counterSeconds[0])); i++) {
+    sum += counterSeconds[i] / 10;
+  }
+  sprintf(dest, "%d:%02d", sum / 60 / 60, sum / 60 % 60);
+}
